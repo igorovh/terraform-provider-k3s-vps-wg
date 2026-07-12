@@ -1,4 +1,4 @@
-# terraform-k3s-vps-wg
+# terraform-provider-k3s-vps-wg
 
 Terraform provider that creates a K3s cluster on existing Debian or Ubuntu VPS nodes over SSH. It can configure WireGuard, UFW, admin peers, and Helm addons.
 
@@ -130,7 +130,7 @@ Use Terraform `dev_overrides` in `~/.terraformrc` or `terraform.rc`:
 ```hcl
 provider_installation {
   dev_overrides {
-    "igorovh/k3s-vps-wg" = "/absolute/path/to/terraform-k3s-vps-wg/bin"
+    "igorovh/k3s-vps-wg" = "/absolute/path/to/terraform-provider-k3s-vps-wg/bin"
   }
 
   direct {}

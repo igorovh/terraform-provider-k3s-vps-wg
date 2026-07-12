@@ -1,6 +1,6 @@
 version: 2
 
-project_name: terraform-k3s-vps-wg
+project_name: terraform-provider-k3s-vps-wg
 
 before:
   hooks:

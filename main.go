@@ -6,7 +6,7 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
-	"github.com/igorovh/terraform-k3s-vps-wg/internal/provider"
+	"github.com/igorovh/terraform-provider-k3s-vps-wg/internal/provider"
 )
 
 var version = "0.1.0"

@@ -1,4 +1,4 @@
-module github.com/igorovh/terraform-k3s-vps-wg
+module github.com/igorovh/terraform-provider-k3s-vps-wg
 
 go 1.23.0
 
