@@ -1,4 +1,9 @@
-# Resource: vpsk3s_cluster
+---
+page_title: "Resource: vpsk3s_cluster"
+subcategory: "Cluster"
+---
+
+# vpsk3s_cluster
 
 Creates and manages a K3s cluster on existing VPS nodes.
 

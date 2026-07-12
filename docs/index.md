@@ -1,3 +1,7 @@
+---
+page_title: "VPS K3s Provider"
+---
+
 # VPS K3s Provider
 
 `vpsk3s` installs K3s on existing Debian/Ubuntu VPS nodes through SSH.
