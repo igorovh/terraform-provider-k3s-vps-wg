@@ -1,5 +1,5 @@
 terraform {
-  required_providers { vpsk3s = { source = "igorovh/k3s-vps-wg", version = "0.1.0" } }
+  required_providers { vpsk3s = { source = "igorovh/k3s-vps-wg", version = "0.1.1" } }
 }
 
 variable "ssh_private_key" {

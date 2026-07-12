@@ -9,7 +9,7 @@ import (
 	"github.com/igorovh/terraform-provider-k3s-vps-wg/internal/provider"
 )
 
-var version = "0.1.0"
+var version = "0.1.1"
 
 func main() {
 	var debug bool

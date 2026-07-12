@@ -11,7 +11,7 @@
 - Run one test/package: `go test ./internal/provider -run TestAssignWireGuardIPsStable`.
 - Format Go files: `make fmt`.
 - Lint: `make lint` runs `go vet ./...`.
-- Local Terraform plugin install needs an explicit version: `make install-local VERSION=0.1.0`; without `VERSION`, the Makefile builds an invalid plugin path/name.
+- Local Terraform plugin install needs an explicit version: `make install-local VERSION=0.1.1`; without `VERSION`, the Makefile builds an invalid plugin path/name.
 
 ## Local Terraform Use
 - Prefer Terraform `dev_overrides` pointing at this repo's `bin` directory after `make build`.
