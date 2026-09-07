@@ -5,6 +5,8 @@ import (
 	"strings"
 )
 
+const externalSnapshotterVersion = "v8.6.0"
+
 func ensureHelm(client *SSHClient) error {
 	_, err := client.Run("command -v helm >/dev/null 2>&1 || curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash")
 	return err
@@ -47,6 +49,9 @@ func installLonghorn(client *SSHClient, cfg ClusterConfig) error {
 	if err := ensureHelm(client); err != nil {
 		return err
 	}
+	if err := installSnapshotSupport(client); err != nil {
+		return err
+	}
 	ns := cfg.Addons.Longhorn.Namespace
 	if ns == "" {
 		ns = "longhorn-system"
@@ -69,6 +74,17 @@ func installLonghorn(client *SSHClient, cfg ClusterConfig) error {
 			return err
 		}
 		cmds = append(cmds, "kubectl apply -f "+shellQuote(path), "rm -f "+shellQuote(path))
+	}
+	_, err := client.Run(strings.Join(cmds, " && "))
+	return err
+}
+
+func installSnapshotSupport(client *SSHClient) error {
+	cmds := []string{
+		"export KUBECONFIG=/etc/rancher/k3s/k3s.yaml",
+		"kubectl apply -k " + shellQuote("https://github.com/kubernetes-csi/external-snapshotter/client/config/crd?ref="+externalSnapshotterVersion),
+		"kubectl apply -k " + shellQuote("https://github.com/kubernetes-csi/external-snapshotter/deploy/kubernetes/snapshot-controller?ref="+externalSnapshotterVersion),
+		"kubectl -n kube-system rollout status deployment/snapshot-controller --timeout=10m",
 	}
 	_, err := client.Run(strings.Join(cmds, " && "))
 	return err
