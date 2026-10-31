@@ -48,9 +48,24 @@ func configureWireGuard(client *SSHClient, cfg ClusterConfig, node NodeConfig) e
 	if err := client.Upload(remote, []byte(conf), 0600); err != nil {
 		return err
 	}
-	cmd := fmt.Sprintf("systemctl enable wg-quick@%s && systemctl restart wg-quick@%s", shellQuote(cfg.WireGuard.Interface), shellQuote(cfg.WireGuard.Interface))
-	_, err := client.Run(cmd)
+	iface := shellQuote(cfg.WireGuard.Interface)
+	active := client.IsActive("wg-quick@" + cfg.WireGuard.Interface)
+	link, _ := client.RunNoPipefail(fmt.Sprintf("ip -o -4 addr show dev %s 2>/dev/null; ip -o link show dev %s 2>/dev/null", iface, iface))
+	if wireGuardNeedsRestart(active, link, node.PrivateIP, cfg.WireGuard.MTU) {
+		_, err := client.Run(fmt.Sprintf("systemctl enable wg-quick@%s && systemctl restart wg-quick@%s", iface, iface))
+		return err
+	}
+	// syncconf updates keys and peers without taking the interface down, so cluster traffic keeps flowing.
+	stripped := shellQuote("/run/vpsk3s-" + cfg.WireGuard.Interface + ".conf")
+	_, err := client.Run(fmt.Sprintf("umask 077; wg-quick strip %s > %s; rc=0; wg syncconf %s %s || rc=$?; rm -f %s; exit $rc", iface, stripped, iface, stripped, stripped))
 	return err
+}
+
+func wireGuardNeedsRestart(active bool, link string, privateIP string, mtu int) bool {
+	if !active {
+		return true
+	}
+	return !strings.Contains(link, " inet "+privateIP+"/32 ") || !strings.Contains(link, fmt.Sprintf(" mtu %d ", mtu))
 }
 
 func renderNodeWireGuardConfig(cfg ClusterConfig, node NodeConfig) string {

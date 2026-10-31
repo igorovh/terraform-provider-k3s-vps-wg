@@ -129,6 +129,16 @@ func (c *SSHClient) Download(path string) ([]byte, error) {
 	return buf.Bytes(), err
 }
 
+func (c *SSHClient) FileEquals(path string, content []byte) bool {
+	current, err := c.Download(path)
+	return err == nil && bytes.Equal(current, content)
+}
+
+func (c *SSHClient) IsActive(service string) bool {
+	out, _ := c.RunNoPipefail("systemctl is-active " + shellQuote(service) + " 2>/dev/null || true")
+	return strings.TrimSpace(out) == "active"
+}
+
 func sshAuthMethods(cfg SSHConfig) ([]ssh.AuthMethod, error) {
 	if cfg.PrivateKey != "" {
 		signer, err := ssh.ParsePrivateKey([]byte(cfg.PrivateKey))

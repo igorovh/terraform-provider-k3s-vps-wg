@@ -50,6 +50,17 @@ func configureFirewall(client *SSHClient, cfg ClusterConfig, node NodeConfig) er
 		commands = append(commands, fmt.Sprintf("ufw allow %d/udp", port))
 	}
 	commands = append(commands, "ufw --force enable")
-	_, err := client.Run(strings.Join(commands, " && "))
-	return err
+	script := []byte(strings.Join(commands, " && ") + "\n")
+	if client.FileEquals(ufwRulesMarker, script) {
+		status, _ := client.RunNoPipefail("ufw status 2>/dev/null || true")
+		if strings.HasPrefix(strings.TrimSpace(status), "Status: active") {
+			return nil
+		}
+	}
+	if _, err := client.Run(string(script)); err != nil {
+		return err
+	}
+	return client.Upload(ufwRulesMarker, script, 0600)
 }
+
+const ufwRulesMarker = "/etc/vpsk3s/ufw-rules"
