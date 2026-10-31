@@ -7,6 +7,17 @@ import (
 
 const externalSnapshotterVersion = "v8.6.0"
 
+var externalSnapshotterManifests = []string{
+	"client/config/crd/snapshot.storage.k8s.io_volumesnapshotclasses.yaml",
+	"client/config/crd/snapshot.storage.k8s.io_volumesnapshotcontents.yaml",
+	"client/config/crd/snapshot.storage.k8s.io_volumesnapshots.yaml",
+	"client/config/crd/groupsnapshot.storage.k8s.io_volumegroupsnapshotclasses.yaml",
+	"client/config/crd/groupsnapshot.storage.k8s.io_volumegroupsnapshotcontents.yaml",
+	"client/config/crd/groupsnapshot.storage.k8s.io_volumegroupsnapshots.yaml",
+	"deploy/kubernetes/snapshot-controller/rbac-snapshot-controller.yaml",
+	"deploy/kubernetes/snapshot-controller/setup-snapshot-controller.yaml",
+}
+
 func ensureHelm(client *SSHClient) error {
 	_, err := client.Run("command -v helm >/dev/null 2>&1 || curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash")
 	return err
@@ -80,12 +91,13 @@ func installLonghorn(client *SSHClient, cfg ClusterConfig) error {
 }
 
 func installSnapshotSupport(client *SSHClient) error {
-	cmds := []string{
-		"export KUBECONFIG=/etc/rancher/k3s/k3s.yaml",
-		"kubectl apply -k " + shellQuote("https://github.com/kubernetes-csi/external-snapshotter/client/config/crd?ref="+externalSnapshotterVersion),
-		"kubectl apply -k " + shellQuote("https://github.com/kubernetes-csi/external-snapshotter/deploy/kubernetes/snapshot-controller?ref="+externalSnapshotterVersion),
-		"kubectl -n kube-system rollout status deployment/snapshot-controller --timeout=10m",
+	cmds := []string{"export KUBECONFIG=/etc/rancher/k3s/k3s.yaml"}
+	// Raw files instead of `kubectl apply -k <github url>`, which needs git on the node.
+	base := "https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/" + externalSnapshotterVersion + "/"
+	for _, file := range externalSnapshotterManifests {
+		cmds = append(cmds, "kubectl apply -f "+shellQuote(base+file))
 	}
+	cmds = append(cmds, "kubectl -n kube-system rollout status deployment/snapshot-controller --timeout=10m")
 	_, err := client.Run(strings.Join(cmds, " && "))
 	return err
 }

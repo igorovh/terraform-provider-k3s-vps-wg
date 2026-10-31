@@ -67,9 +67,13 @@ func installK3s(client *SSHClient, cfg ClusterConfig, node NodeConfig) error {
 	if _, err := client.Run("apt-get update -y && DEBIAN_FRONTEND=noninteractive apt-get install -y " + strings.Join(packages, " ")); err != nil {
 		return err
 	}
-	config := renderK3sConfig(cfg, node)
-	if err := client.Upload("/etc/rancher/k3s/config.yaml", []byte(config), 0644); err != nil {
-		return err
+	config := []byte(renderK3sConfig(cfg, node))
+	configPath := "/etc/rancher/k3s/config.yaml"
+	unchanged := client.FileEquals(configPath, config)
+	if !unchanged {
+		if err := client.Upload(configPath, config, 0644); err != nil {
+			return err
+		}
 	}
 	service := "k3s"
 	installArg := "server"
@@ -77,8 +81,10 @@ func installK3s(client *SSHClient, cfg ClusterConfig, node NodeConfig) error {
 		service = "k3s-agent"
 		installArg = "agent"
 	}
-	active, _ := client.RunNoPipefail("systemctl is-active " + shellQuote(service) + " 2>/dev/null || true")
-	if strings.TrimSpace(active) == "active" {
+	if client.IsActive(service) {
+		if unchanged {
+			return nil
+		}
 		_, err := client.Run("systemctl restart " + shellQuote(service))
 		return err
 	}
