@@ -31,6 +31,8 @@ resource "vpsk3s_cluster" "test" {
 - `addons` is optional.
 - `admin_peer` is optional and requires WireGuard.
 - `admin_peers` is optional and is intended for multiple developer or pipeline WireGuard peers.
+- `dns` is optional. When set, K3s uses a provider-managed `resolv.conf`.
+- `sysctl` is optional and sets kernel parameters on every node.
 
 ## Node Object
 
@@ -92,6 +94,36 @@ k3s = {
 ```
 
 K3s config is written to `/etc/rancher/k3s/config.yaml`.
+
+## DNS
+
+Some VPS images add a `search` domain to the host network config, for example through cloud-init and netplan. K3s copies the host `resolv.conf` into CoreDNS and into pods with `dnsPolicy: Default`, and pods use `ndots:5`. If that domain has wildcard DNS, lookups of external names such as `s3.example.com` can resolve to the wrong host.
+
+```hcl
+dns = {
+  nameservers    = []
+  search_domains = []
+}
+```
+
+Setting `dns` (even `dns = {}`) makes the provider write `/etc/vpsk3s/resolv.conf` on every node and set `resolv-conf` in the K3s config:
+
+- `nameservers`: up to 3 IP addresses. When empty, the provider reads the node's upstream nameservers from `/run/systemd/resolve/resolv.conf` (or `/etc/resolv.conf`) and skips loopback addresses such as the `127.0.0.53` stub.
+- `search_domains`: search domains for CoreDNS and `dnsPolicy: Default` pods. Default: none, so host search domains are ignored.
+
+The file is refreshed on every apply and K3s does not restart when only the file changes. Adding or removing the `dns` block changes `config.yaml`, so K3s restarts once on each node. Running pods keep their old `resolv.conf` until they are recreated. Do not also pass `resolv-conf` in `extra_server_args` or `extra_agent_args`.
+
+The provider does not change the host's own resolver. To stop cloud-init from writing the network config again, disable it on the host (`network: {config: disabled}` in `/etc/cloud/cloud.cfg.d/`).
+
+## Sysctl
+
+```hcl
+sysctl = {
+  "net.mptcp.enabled" = "0"
+}
+```
+
+Values are written to `/etc/sysctl.d/90-vpsk3s.conf` and applied with `sysctl -p` on every apply, so they also persist across reboots. An unknown key fails the apply. Removing the map deletes the file, but the current runtime values stay until the next reboot.
 
 ## Firewall
 

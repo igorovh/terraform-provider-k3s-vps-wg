@@ -119,6 +119,9 @@ func renderK3sConfig(cfg ClusterConfig, node NodeConfig) string {
 			fmt.Fprintf(&b, "advertise-address: %q\n", node.PublicIP)
 		}
 	}
+	if cfg.DNS.Enabled {
+		fmt.Fprintf(&b, "resolv-conf: %q\n", k3sResolvConfPath)
+	}
 	if node.Role == "server" {
 		fmt.Fprintf(&b, "cluster-cidr: %q\n", cfg.K3s.ClusterCIDR)
 		fmt.Fprintf(&b, "service-cidr: %q\n", cfg.K3s.ServiceCIDR)

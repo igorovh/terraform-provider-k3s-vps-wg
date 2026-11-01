@@ -6,6 +6,7 @@ import (
 	"net"
 	"regexp"
 	"sort"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -145,6 +146,25 @@ func adminPeersAttribute() schema.MapNestedAttribute {
 	}
 }
 
+func dnsAttribute() schema.SingleNestedAttribute {
+	return schema.SingleNestedAttribute{
+		Optional:            true,
+		MarkdownDescription: "When set, K3s uses a provider-managed resolv.conf instead of the host one, so search domains injected by the VPS image never reach pods.",
+		Attributes: map[string]schema.Attribute{
+			"nameservers":    schema.ListAttribute{Optional: true, ElementType: types.StringType, MarkdownDescription: "Up to 3 upstream nameservers. Defaults to the non-loopback nameservers of each node."},
+			"search_domains": schema.ListAttribute{Optional: true, ElementType: types.StringType, MarkdownDescription: "Search domains for pods using dnsPolicy Default and for CoreDNS. Defaults to none."},
+		},
+	}
+}
+
+func sysctlAttribute() schema.MapAttribute {
+	return schema.MapAttribute{
+		Optional:            true,
+		ElementType:         types.StringType,
+		MarkdownDescription: "Kernel parameters written to /etc/sysctl.d/90-vpsk3s.conf and applied on every node, e.g. { \"net.mptcp.enabled\" = \"0\" }.",
+	}
+}
+
 func validatePlan(ctx context.Context, plan ClusterResourceModel) diag.Diagnostics {
 	var diags diag.Diagnostics
 	var nodes []NodeModel
@@ -216,6 +236,8 @@ func validatePlan(ctx context.Context, plan ClusterResourceModel) diag.Diagnosti
 			diags.AddAttributeError(pathRoot("wireguard"), "Invalid WireGuard addressing", err.Error())
 		}
 	}
+	diags.Append(validateDNS(expandDNS(ctx, plan.DNS), expandK3s(ctx, plan.K3s))...)
+	diags.Append(validateSysctl(expandSysctl(ctx, plan.Sysctl))...)
 	addons := expandAddons(ctx, plan.Addons)
 	if addons.Traefik.Mode != "default" && addons.Traefik.Mode != "disabled" && addons.Traefik.Mode != "install" {
 		diags.AddAttributeError(pathRoot("addons"), "Invalid Traefik mode", "addons.traefik.mode must be one of default, disabled, install.")
@@ -239,6 +261,49 @@ func validateConfig(cfg ClusterConfig) diag.Diagnostics {
 	}
 	if cfg.Firewall.Enabled && cfg.Firewall.AllowKubeAPI && len(cfg.Firewall.AdminCIDRs) == 0 {
 		diags.AddWarning("Kubernetes API exposed publicly", "firewall.allow_kube_api is true and admin_cidrs is empty, so 6443/tcp will be allowed from 0.0.0.0/0.")
+	}
+	return diags
+}
+
+func validateDNS(dns DNSConfig, k3s K3sConfig) diag.Diagnostics {
+	var diags diag.Diagnostics
+	if !dns.Enabled {
+		return diags
+	}
+	if len(dns.Nameservers) > maxNameservers {
+		diags.AddAttributeError(pathRoot("dns"), "Too many nameservers", fmt.Sprintf("dns.nameservers accepts at most %d entries; glibc ignores the rest.", maxNameservers))
+	}
+	for _, ns := range dns.Nameservers {
+		ip := net.ParseIP(ns)
+		if ip == nil || ip.IsLoopback() || ip.IsUnspecified() {
+			diags.AddAttributeError(pathRoot("dns"), "Invalid nameserver", fmt.Sprintf("%q must be a non-loopback IP address reachable from pods.", ns))
+		}
+	}
+	for _, domain := range dns.SearchDomains {
+		if !validHostname(domain) {
+			diags.AddAttributeError(pathRoot("dns"), "Invalid search domain", fmt.Sprintf("%q is not a valid domain name.", domain))
+		}
+	}
+	for _, arg := range append(append([]string{}, k3s.ExtraServerArgs...), k3s.ExtraAgentArgs...) {
+		if strings.HasPrefix(strings.TrimPrefix(strings.TrimSpace(arg), "--"), "resolv-conf") {
+			diags.AddAttributeError(pathRoot("dns"), "dns conflicts with resolv-conf", "Remove resolv-conf from k3s extra args; the dns block sets it.")
+			break
+		}
+	}
+	return diags
+}
+
+var sysctlKeyPattern = regexp.MustCompile(`^[a-zA-Z0-9_]+([./][a-zA-Z0-9_-]+)+$`)
+
+func validateSysctl(values map[string]string) diag.Diagnostics {
+	var diags diag.Diagnostics
+	for key, value := range values {
+		if !sysctlKeyPattern.MatchString(key) {
+			diags.AddAttributeError(pathRoot("sysctl"), "Invalid sysctl key", fmt.Sprintf("%q is not a valid sysctl key.", key))
+		}
+		if strings.TrimSpace(value) == "" || strings.ContainsAny(value, "\n\r#") {
+			diags.AddAttributeError(pathRoot("sysctl"), "Invalid sysctl value", fmt.Sprintf("Value for %q must be non-empty, on one line and without '#'.", key))
+		}
 	}
 	return diags
 }
