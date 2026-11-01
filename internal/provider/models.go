@@ -93,6 +93,7 @@ type K3sModel struct {
 	InstallNFSCommon    types.Bool   `tfsdk:"install_nfs_common"`
 	ExtraServerArgs     types.List   `tfsdk:"extra_server_args"`
 	ExtraAgentArgs      types.List   `tfsdk:"extra_agent_args"`
+	Token               types.String `tfsdk:"token"`
 }
 
 type FirewallModel struct {
@@ -200,6 +201,7 @@ type K3sConfig struct {
 	InstallNFSCommon    bool
 	ExtraServerArgs     []string
 	ExtraAgentArgs      []string
+	Token               string
 }
 
 type FirewallConfig struct {
@@ -313,7 +315,7 @@ func expandClusterConfig(ctx context.Context, plan ClusterResourceModel, prior C
 	if !prior.WireGuardPrivateKeys.IsNull() && !prior.WireGuardPrivateKeys.IsUnknown() {
 		diags.Append(prior.WireGuardPrivateKeys.ElementsAs(ctx, &priorKeys, false)...)
 	}
-	cfg.K3sToken = valueStringDefault(prior.K3sToken, "")
+	cfg.K3sToken = resolveK3sToken(cfg.K3s.Token, valueStringDefault(prior.K3sToken, ""))
 	if cfg.K3sToken == "" {
 		token, err := randomSecret(32)
 		if err != nil {
@@ -541,6 +543,7 @@ func expandK3s(ctx context.Context, obj types.Object) K3sConfig {
 	out.DisableComponents = stringList(ctx, m.DisableComponents)
 	out.ExtraServerArgs = stringList(ctx, m.ExtraServerArgs)
 	out.ExtraAgentArgs = stringList(ctx, m.ExtraAgentArgs)
+	out.Token = valueStringDefault(m.Token, "")
 	return out
 }
 

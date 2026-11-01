@@ -9,7 +9,7 @@ terraform {
   required_providers {
     vpsk3s = {
       source  = "igorovh/k3s-vps-wg"
-      version = "0.1.4"
+      version = "0.1.5"
     }
   }
 }
@@ -113,7 +113,7 @@ Each node can override global SSH settings with `ssh_user`, `ssh_port`, `ssh_pas
 
 ## Security Notes
 
-Terraform state contains sensitive material: SSH passwords, SSH private keys if provided inline, WireGuard private keys, the generated K3s token, kubeconfig, and admin WireGuard config. Use encrypted remote state and restrict access to state files.
+Terraform state contains sensitive material: SSH passwords, SSH private keys if provided inline, WireGuard private keys, the generated K3s token, kubeconfig, and admin WireGuard config. Use encrypted remote state and restrict access to state files. To keep the K3s token outside the provider, set `k3s.token`; see `docs/resources/cluster.md` for rotating it.
 
 For developer and pipeline WireGuard access, prefer generating keys outside Terraform and passing only `admin_peers.<name>.public_key`. That keeps private keys out of Terraform state.
 
@@ -160,7 +160,7 @@ make install-local
 This copies the binary to Terraform's local plugin directory:
 
 ```text
-<terraform-plugin-root>/registry.terraform.io/igorovh/k3s-vps-wg/0.1.4/<os>_<arch>/terraform-provider-k3s-vps-wg_v0.1.4
+<terraform-plugin-root>/registry.terraform.io/igorovh/k3s-vps-wg/0.1.5/<os>_<arch>/terraform-provider-k3s-vps-wg_v0.1.5
 ```
 
 On Windows the plugin root is `%APPDATA%/terraform.d/plugins`. On Linux and macOS it is `~/.terraform.d/plugins`.

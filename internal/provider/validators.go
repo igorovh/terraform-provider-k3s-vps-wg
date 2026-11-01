@@ -78,6 +78,7 @@ func k3sAttribute() schema.SingleNestedAttribute {
 			"install_nfs_common":    schema.BoolAttribute{Optional: true},
 			"extra_server_args":     schema.ListAttribute{Optional: true, ElementType: types.StringType},
 			"extra_agent_args":      schema.ListAttribute{Optional: true, ElementType: types.StringType},
+			"token":                 schema.StringAttribute{Optional: true, Sensitive: true, MarkdownDescription: "Join token for all nodes. Overrides the generated `k3s_token`; changing it on a running cluster requires `k3s token rotate` first."},
 		},
 	}
 }

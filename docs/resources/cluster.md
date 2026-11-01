@@ -93,7 +93,17 @@ k3s = {
 }
 ```
 
-K3s config is written to `/etc/rancher/k3s/config.yaml`.
+K3s config is written to `/etc/rancher/k3s/config.yaml` with mode `0600`.
+
+`token` (optional, sensitive) sets the join token used by every node. Without it the provider
+generates one and keeps it in state as `k3s_token`. To rotate the token of a running cluster:
+
+1. Run `k3s token rotate --new-token <new>` on one server.
+2. Set `k3s.token = "<new>"` and apply. Every node gets the new token and restarts K3s.
+
+Applying a new `token` without step 1 breaks servers: they cannot decrypt the datastore bootstrap
+data with the new token and fail to start. The plan shows a warning when `token` differs from
+the token in state. Etcd snapshots taken before the rotation still need the old token to restore.
 
 ## DNS
 
