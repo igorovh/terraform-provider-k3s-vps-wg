@@ -9,7 +9,7 @@ terraform {
   required_providers {
     vpsk3s = {
       source  = "igorovh/k3s-vps-wg"
-      version = "0.1.3"
+      version = "0.1.4"
     }
   }
 }
@@ -160,7 +160,7 @@ make install-local
 This copies the binary to Terraform's local plugin directory:
 
 ```text
-<terraform-plugin-root>/registry.terraform.io/igorovh/k3s-vps-wg/0.1.3/<os>_<arch>/terraform-provider-k3s-vps-wg_v0.1.3
+<terraform-plugin-root>/registry.terraform.io/igorovh/k3s-vps-wg/0.1.4/<os>_<arch>/terraform-provider-k3s-vps-wg_v0.1.4
 ```
 
 On Windows the plugin root is `%APPDATA%/terraform.d/plugins`. On Linux and macOS it is `~/.terraform.d/plugins`.

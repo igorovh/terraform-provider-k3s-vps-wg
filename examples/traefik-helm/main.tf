@@ -1,5 +1,5 @@
 terraform {
-  required_providers { vpsk3s = { source = "igorovh/k3s-vps-wg", version = "0.1.3" } }
+  required_providers { vpsk3s = { source = "igorovh/k3s-vps-wg", version = "0.1.4" } }
 }
 
 provider "vpsk3s" {
