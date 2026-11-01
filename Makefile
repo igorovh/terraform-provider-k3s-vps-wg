@@ -1,4 +1,4 @@
-VERSION ?= 0.1.4
+VERSION ?= 0.1.5
 PROVIDER_HOSTNAME ?= igorovh
 PROVIDER_NAMESPACE ?= k3s-vps-wg
 NAME := terraform-provider-k3s-vps-wg

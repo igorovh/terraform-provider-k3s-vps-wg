@@ -15,6 +15,19 @@ func randomSecret(size int) (string, error) {
 	return base64.RawURLEncoding.EncodeToString(b), nil
 }
 
+// resolveK3sToken prefers the configured token, then the one in state; empty means generate one.
+func resolveK3sToken(configured, prior string) string {
+	if configured != "" {
+		return configured
+	}
+	return prior
+}
+
+// k3sTokenRotates reports whether applying would write a different join token to running nodes.
+func k3sTokenRotates(configured, prior string) bool {
+	return configured != "" && prior != "" && configured != prior
+}
+
 func configureHostnameAndHosts(client *SSHClient, cfg ClusterConfig, node NodeConfig) error {
 	if node.Hostname != "" {
 		if _, err := client.Run("hostnamectl set-hostname " + shellQuote(node.Hostname)); err != nil {
@@ -70,10 +83,13 @@ func installK3s(client *SSHClient, cfg ClusterConfig, node NodeConfig) error {
 	config := []byte(renderK3sConfig(cfg, node))
 	configPath := "/etc/rancher/k3s/config.yaml"
 	unchanged := client.FileEquals(configPath, config)
+	// The file holds the join token; releases up to 0.1.4 wrote it world-readable.
 	if !unchanged {
-		if err := client.Upload(configPath, config, 0644); err != nil {
+		if err := client.Upload(configPath, config, 0600); err != nil {
 			return err
 		}
+	} else if _, err := client.Run("chmod 600 " + shellQuote(configPath)); err != nil {
+		return err
 	}
 	service := "k3s"
 	installArg := "server"

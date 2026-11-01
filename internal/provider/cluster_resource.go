@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -52,6 +53,21 @@ func (r *clusterResource) ModifyPlan(ctx context.Context, req resource.ModifyPla
 		return
 	}
 	resp.Diagnostics.Append(validatePlan(ctx, plan)...)
+	if req.State.Raw.IsNull() {
+		return
+	}
+	var prior ClusterResourceModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &prior)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if k3sTokenRotates(expandK3s(ctx, plan.K3s).Token, valueStringDefault(prior.K3sToken, "")) {
+		resp.Diagnostics.AddAttributeWarning(
+			path.Root("k3s").AtName("token"),
+			"K3s join token changes",
+			"Apply rewrites config.yaml and restarts K3s on every node. Run `k3s token rotate --new-token <token>` on a server first; a server restarted with a token that does not match the datastore fails to start.",
+		)
+	}
 }
 
 func (r *clusterResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
