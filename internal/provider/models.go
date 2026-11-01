@@ -42,6 +42,8 @@ type ClusterResourceModel struct {
 	Addons     types.Object `tfsdk:"addons"`
 	AdminPeer  types.Object `tfsdk:"admin_peer"`
 	AdminPeers types.Map    `tfsdk:"admin_peers"`
+	DNS        types.Object `tfsdk:"dns"`
+	Sysctl     types.Map    `tfsdk:"sysctl"`
 
 	Kubeconfig                types.String `tfsdk:"kubeconfig"`
 	ServerURL                 types.String `tfsdk:"server_url"`
@@ -131,6 +133,11 @@ type StorageClassModel struct {
 	DefaultClass   types.Bool   `tfsdk:"default_class"`
 }
 
+type DNSModel struct {
+	Nameservers   types.List `tfsdk:"nameservers"`
+	SearchDomains types.List `tfsdk:"search_domains"`
+}
+
 type AdminPeerModel struct {
 	Enabled types.Bool   `tfsdk:"enabled"`
 	Name    types.String `tfsdk:"name"`
@@ -153,6 +160,8 @@ type ClusterConfig struct {
 	AdminPeer          AdminPeerConfig
 	AdminPeers         map[string]AdminPeerConfig
 	AdminPeerNames     []string
+	DNS                DNSConfig
+	Sysctl             map[string]string
 	K3sToken           string
 	WGPrivateKeys      map[string]string
 	AdminWGPriv        string
@@ -231,6 +240,12 @@ type StorageClassConfig struct {
 	DefaultClass   bool
 }
 
+type DNSConfig struct {
+	Enabled       bool
+	Nameservers   []string
+	SearchDomains []string
+}
+
 type AdminPeerConfig struct {
 	Enabled         bool
 	Name            string
@@ -291,6 +306,8 @@ func expandClusterConfig(ctx context.Context, plan ClusterResourceModel, prior C
 	cfg.Addons = expandAddons(ctx, plan.Addons)
 	cfg.AdminPeer = expandAdminPeer(ctx, plan.AdminPeer)
 	cfg.AdminPeers, cfg.AdminPeerNames = expandAdminPeers(ctx, plan.AdminPeers)
+	cfg.DNS = expandDNS(ctx, plan.DNS)
+	cfg.Sysctl = expandSysctl(ctx, plan.Sysctl)
 
 	priorKeys := map[string]string{}
 	if !prior.WireGuardPrivateKeys.IsNull() && !prior.WireGuardPrivateKeys.IsUnknown() {
@@ -572,6 +589,24 @@ func expandAddons(ctx context.Context, obj types.Object) AddonsConfig {
 	if out.Longhorn.Enabled && len(out.Longhorn.StorageClasses) == 0 {
 		out.Longhorn.StorageClasses = defaultLonghornStorageClasses()
 	}
+	return out
+}
+
+func expandDNS(ctx context.Context, obj types.Object) DNSConfig {
+	if obj.IsNull() || obj.IsUnknown() {
+		return DNSConfig{}
+	}
+	var m DNSModel
+	obj.As(ctx, &m, basetypes.ObjectAsOptions{})
+	return DNSConfig{Enabled: true, Nameservers: stringList(ctx, m.Nameservers), SearchDomains: stringList(ctx, m.SearchDomains)}
+}
+
+func expandSysctl(ctx context.Context, m types.Map) map[string]string {
+	out := map[string]string{}
+	if m.IsNull() || m.IsUnknown() {
+		return out
+	}
+	m.ElementsAs(ctx, &out, false)
 	return out
 }
 

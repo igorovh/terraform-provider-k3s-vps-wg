@@ -62,6 +62,8 @@ Run `terraform init` and `terraform apply`. The target node must already exist a
 - `firewall.enabled = false`
 - `addons.longhorn.enabled = false`
 - `addons.traefik.mode = "default"`
+- `dns` unset: K3s uses the host `resolv.conf`. Set `dns = {}` to drop search domains added by the VPS image; see [DNS](docs/resources/cluster.md#dns).
+- `sysctl = {}`
 
 With WireGuard enabled, K3s node traffic and kubeconfig use the WireGuard IP of the first server node. To use `kubectl` locally, your workstation must reach that private network, typically through `admin_peer`.
 

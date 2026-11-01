@@ -136,6 +136,9 @@ func (r *clusterResource) applyCluster(ctx context.Context, cfg ClusterConfig) (
 			}
 			err = configureHostnameAndHosts(client, cfg, n)
 			if err == nil {
+				err = configureNodeSystem(client, cfg)
+			}
+			if err == nil {
 				err = configureWireGuard(client, cfg, n)
 			}
 			client.Close()
@@ -164,6 +167,9 @@ func (r *clusterResource) applyCluster(ctx context.Context, cfg ClusterConfig) (
 				return "", "", "", nil, statuses, err
 			}
 			err = configureHostnameAndHosts(client, cfg, n)
+			if err == nil {
+				err = configureNodeSystem(client, cfg)
+			}
 			client.Close()
 			if err != nil {
 				return "", "", "", nil, statuses, err
@@ -272,6 +278,8 @@ func clusterSchema(ctx context.Context) schema.Schema {
 			"addons":                       addonsAttribute(),
 			"admin_peer":                   adminPeerAttribute(),
 			"admin_peers":                  adminPeersAttribute(),
+			"dns":                          dnsAttribute(),
+			"sysctl":                       sysctlAttribute(),
 			"kubeconfig":                   schema.StringAttribute{Computed: true, Sensitive: true},
 			"server_url":                   schema.StringAttribute{Computed: true},
 			"admin_wireguard_config":       schema.StringAttribute{Computed: true, Sensitive: true},

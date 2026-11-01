@@ -21,7 +21,8 @@
 ## Provider Behavior To Preserve
 - `Read` intentionally does not SSH during refresh; remote drift is handled during apply.
 - `Delete` is best-effort only: it stops `k3s`, `k3s-agent`, and `wg-quick@<interface>` but does not wipe nodes.
-- Apply order is WireGuard setup/connectivity, firewall, K3s install, addons, then kubeconfig fetch from the first server.
+- Apply order is hostname/hosts, `sysctl` and the `dns` resolv.conf, WireGuard setup/connectivity, firewall, K3s install, addons, then kubeconfig fetch from the first server.
+- `resolv-conf` appears in `config.yaml` only when the `dns` block is set, so upgrading the provider does not restart K3s on existing clusters.
 - Re-applying to a running cluster must not restart services: WireGuard uses `wg syncconf` unless the address or MTU changed, K3s restarts only when `config.yaml` changed, and UFW resets only when the rules in `/etc/vpsk3s/ufw-rules` changed. Restarting WireGuard on every node made Longhorn detach volumes and move pods.
 - Nodes need no `git`: snapshot CRDs and the controller are applied as raw files, not with `kubectl apply -k <github url>`.
 - Node identity is `hostname` when set, otherwise `public_ip`; this drives stable WireGuard IPs and stored private keys.
